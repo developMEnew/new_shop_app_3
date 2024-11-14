@@ -1,24 +1,45 @@
-import React, { useState } from 'react';
-import { X, Image as ImageIcon, X as XIcon } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { X, Image as ImageIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Button } from './ui/button';
+
+const formSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  costPrice: z.string().min(1, 'Cost price is required'),
+  sellingPrice: z.string().min(1, 'Selling price is required'),
+  description: z.string().min(1, 'Description is required'),
+});
 
 interface AddItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (item: {
     name: string;
-    price: number;
+    costPrice: number;
+    sellingPrice: number;
     description: string;
     images: string[];
   }) => void;
 }
 
 export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
   const [images, setImages] = useState<string[]>([]);
-
-  if (!isOpen) return null;
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      costPrice: '',
+      sellingPrice: '',
+      description: '',
+    },
+  });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
@@ -39,133 +60,140 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
     setImages(newImages);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     onAdd({
-      name,
-      price: parseFloat(price),
-      description,
-      images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1472214103451-9374bd1c798e']
+      name: values.name,
+      costPrice: parseFloat(values.costPrice),
+      sellingPrice: parseFloat(values.sellingPrice),
+      description: values.description,
+      images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1472214103451-9374bd1c798e'],
     });
-    setName('');
-    setPrice('');
-    setDescription('');
+    form.reset();
     setImages([]);
     onClose();
   };
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl z-50 max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-semibold">Add New Item</h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Item</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter item name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <div className="p-6 overflow-y-auto custom-scrollbar">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter item name"
-                required
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="costPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost Price (RS)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="sellingPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Selling Price (RS)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price (RS)
-              </label>
-              <input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0.00"
-                required
-                min="0"
-                step="0.01"
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter item description" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter item description"
-                rows={3}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Images (up to 3)
-              </label>
+            <div className="space-y-2">
+              <FormLabel>Images (up to 3)</FormLabel>
               <div className="grid grid-cols-3 gap-4">
-                {[0, 1, 2].map((index) => (
-                  <div key={index} className="relative">
-                    {images[index] ? (
-                      <div className="relative aspect-square rounded-lg overflow-hidden group">
-                        <img
-                          src={images[index]}
-                          alt={`Upload ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <XIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="block aspect-square rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-500 cursor-pointer transition-colors">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleImageChange(e, index)}
-                          className="hidden"
-                        />
-                        <div className="flex flex-col items-center justify-center h-full p-2">
-                          <ImageIcon className="w-6 h-6 text-gray-400" />
-                          <span className="text-xs text-gray-500 mt-1 text-center">
-                            Choose Image {index + 1}
-                          </span>
+                <AnimatePresence>
+                  {[0, 1, 2].map((index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {images[index] ? (
+                        <div className="relative aspect-square rounded-lg overflow-hidden group">
+                          <img
+                            src={images[index]}
+                            alt={`Upload ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeImage(index)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
                         </div>
-                      </label>
-                    )}
-                  </div>
-                ))}
+                      ) : (
+                        <label className="block aspect-square rounded-lg border-2 border-dashed border-gray-300 hover:border-primary cursor-pointer transition-colors">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(e, index)}
+                            className="hidden"
+                          />
+                          <div className="flex flex-col items-center justify-center h-full p-2">
+                            <ImageIcon className="w-6 h-6 text-gray-400" />
+                            <span className="text-xs text-gray-500 mt-1 text-center">
+                              Image {index + 1}
+                            </span>
+                          </div>
+                        </label>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Add Item
-            </button>
+            <Button type="submit" className="w-full">Add Item</Button>
           </form>
-        </div>
-      </div>
-    </>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
