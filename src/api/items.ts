@@ -1,44 +1,51 @@
-import { connectToDatabase } from '../lib/mongodb';
+import { Item } from '../types';
 
-export async function getItems() {
-  try {
-    const { db } = await connectToDatabase();
-    const items = await db.collection('items').find({}).toArray();
-    return items;
-  } catch (error) {
+const API_URL = '/api';
+
+export async function getItems(): Promise<Item[]> {
+  const response = await fetch(`${API_URL}/items`);
+  if (!response.ok) {
     throw new Error('Failed to fetch items');
   }
+  return response.json();
 }
 
-export async function createItem(item: any) {
-  try {
-    const { db } = await connectToDatabase();
-    const result = await db.collection('items').insertOne(item);
-    return { _id: result.insertedId, ...item };
-  } catch (error) {
-    throw new Error('Failed to add item');
+export async function createItem(item: Omit<Item, '_id'>): Promise<Item> {
+  const response = await fetch(`${API_URL}/items`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(item),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to create item');
   }
+  return response.json();
 }
 
-export async function updateItem(id: string, item: any) {
-  try {
-    const { db } = await connectToDatabase();
-    await db.collection('items').updateOne(
-      { _id: id },
-      { $set: item }
-    );
-    return { success: true };
-  } catch (error) {
+export async function updateItem(id: string, item: Partial<Item>): Promise<Item> {
+  const response = await fetch(`${API_URL}/items/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(item),
+  });
+  
+  if (!response.ok) {
     throw new Error('Failed to update item');
   }
+  return response.json();
 }
 
-export async function deleteItem(id: string) {
-  try {
-    const { db } = await connectToDatabase();
-    await db.collection('items').deleteOne({ _id: id });
-    return { success: true };
-  } catch (error) {
+export async function deleteItem(id: string): Promise<void> {
+  const response = await fetch(`${API_URL}/items/${id}`, {
+    method: 'DELETE',
+  });
+  
+  if (!response.ok) {
     throw new Error('Failed to delete item');
   }
 }

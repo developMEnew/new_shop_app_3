@@ -1,21 +1,52 @@
 import { NextResponse } from 'next/server';
-import { ObjectId } from 'mongodb';
-import { connectToDatabase } from '@/lib/mongodb';
+import { connectDB } from '@/lib/db';
+import Item from '@/models/Item';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await connectDB();
+    const item = await Item.findById(params.id);
+    if (!item) {
+      return NextResponse.json(
+        { error: 'Item not found' },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json(item);
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to fetch item' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { db } = await connectToDatabase();
-    const item = await request.json();
-    await db.collection('items').updateOne(
-      { _id: new ObjectId(params.id) },
-      { $set: item }
-    );
-    return NextResponse.json({ success: true });
+    await connectDB();
+    const data = await request.json();
+    const item = await Item.findByIdAndUpdate(params.id, data, {
+      new: true,
+      runValidators: true,
+    });
+    if (!item) {
+      return NextResponse.json(
+        { error: 'Item not found' },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json(item);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update item' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update item' },
+      { status: 500 }
+    );
   }
 }
 
@@ -24,10 +55,19 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { db } = await connectToDatabase();
-    await db.collection('items').deleteOne({ _id: new ObjectId(params.id) });
+    await connectDB();
+    const item = await Item.findByIdAndDelete(params.id);
+    if (!item) {
+      return NextResponse.json(
+        { error: 'Item not found' },
+        { status: 404 }
+      );
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete item' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to delete item' },
+      { status: 500 }
+    );
   }
 }

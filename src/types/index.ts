@@ -5,4 +5,6 @@ export interface Item {
   sellingPrice: number;
   description: string;
   images: string[];
+  createdAt: string;
+  updatedAt: string;
 }
